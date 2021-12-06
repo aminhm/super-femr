@@ -23,6 +23,7 @@ import controllers.AssetsFinder;
 import femr.business.services.core.*;
 import femr.common.dtos.CurrentUser;
 import femr.common.dtos.ServiceResponse;
+import femr.common.models.InventoryExportItem;
 import femr.common.models.MissionTripItem;
 import femr.data.models.mysql.Roles;
 import femr.ui.helpers.security.AllowedRoles;
@@ -256,7 +257,7 @@ public class InventoryController extends Controller {
             if (doesInventoryExistInTrip.getResponseObject()){
                 createMedicationInventoryServiceResponse = inventoryService.reAddInventoryMedication(medicationId, tripId);
             } else {
-                createMedicationInventoryServiceResponse = inventoryService.createMedicationInventory(medicationId, tripId);
+                createMedicationInventoryServiceResponse = inventoryService.createOrUpdateMedicationInventory(medicationId, tripId,0,0,null,null);
             }
             //sets initial total quantity
             ServiceResponse<MedicationItem> setQuantityTotalServiceResponse =
@@ -351,7 +352,7 @@ public class InventoryController extends Controller {
                         if(inventoryService.existsInventoryMedicationInTrip(medicationItemServiceResponse.getResponseObject().getId(),tripId).getResponseObject()){
                             createOrReAddInventoryResponse = inventoryService.reAddInventoryMedication(medicationItemServiceResponse.getResponseObject().getId(), tripId);
                         } else {
-                            createOrReAddInventoryResponse = inventoryService.createMedicationInventory(medicationItemServiceResponse.getResponseObject().getId(), tripId);
+                            createOrReAddInventoryResponse = inventoryService.createOrUpdateMedicationInventory(medicationItemServiceResponse.getResponseObject().getId(), tripId,0,0,null,null);
                         }
 
                         if (createOrReAddInventoryResponse.hasErrors()) {
@@ -386,9 +387,70 @@ public class InventoryController extends Controller {
       return ok(exportServiceResponse.getResponseObject()).as("application/x-download");
     }
 
+    public Result importPost(Integer tripId,String filePath) {
+
+        ServiceResponse<List<InventoryExportItem>> exportServiceResponse = inventoryService.importCSV(tripId,filePath);
+
+        final Form<ExistingViewModelPost> existingViewModelPostForm = formFactory.form(ExistingViewModelPost.class);
+        Form<ExistingViewModelPost> existingForm = existingViewModelPostForm.bindFromRequest();
+        ExistingViewModelPost existingViewModelPost = existingForm.bindFromRequest().get();
+
+        //if just adding medications from the concept dictionary, there won't be any amount involved
+        //and knowledge of the ingredients already exists.
+        if (existingViewModelPost.getNewConceptMedicationsForInventory() != null) {
+
+            ServiceResponse<MedicationItem> conceptMedicationServiceResponse;
+            ServiceResponse<MedicationItem> medicationItemServiceResponse;
+            MedicationItem conceptMedicationItem;
+
+            //for each concept medication id that was sent from the select2 form
+            for (InventoryExportItem conceptMedication : exportServiceResponse.getResponseObject()) {
+
+                //get the actual concept MedicationItem from the id that was sent in
+                conceptMedicationServiceResponse = conceptService.retrieveConceptMedication(conceptMedication.getMedicationId());
+                if (conceptMedicationServiceResponse.hasErrors()) {
+
+                    return internalServerError();
+                } else {
+
+                    //create a non-concept MedicationItem from the concept MedicationItem
+                    conceptMedicationItem = conceptMedicationServiceResponse.getResponseObject();
+                    medicationItemServiceResponse = medicationService.createMedication(conceptMedicationItem.getName(), conceptMedicationItem.getForm(), conceptMedicationItem.getActiveIngredients());
+
+                    if (medicationItemServiceResponse.hasErrors()) {
+
+                        return internalServerError();
+                    } else {
+
+                        //Check to see if the medication has ever been added to the trip inventory.
+                        // If so, set it's soft deletion state to being 'undeleted'. Otherwise, create the inventory medication.
+                        ServiceResponse<MedicationItem> createOrReAddInventoryResponse = null;
+                        if(inventoryService.existsInventoryMedicationInTrip(medicationItemServiceResponse.getResponseObject().getId(),tripId).getResponseObject()){
+                            createOrReAddInventoryResponse = inventoryService.reAddInventoryMedication(medicationItemServiceResponse.getResponseObject().getId(), tripId);
+                        } else {
+                            createOrReAddInventoryResponse = inventoryService.createOrUpdateMedicationInventory(medicationItemServiceResponse.getResponseObject().getId(), tripId,0,0,null,null);
+                        }
+
+                        if (createOrReAddInventoryResponse.hasErrors()) {
+
+                            return internalServerError();
+                        }
+                    }
+
+
+                }
+            }
+        }
+
+        return redirect("/admin/inventory/"+tripId);
+    }
+
+
+
+
     /**
      * Called when a user hits the remove button to remove a medication from the trip formulary.
-     * @param medicationID
+     * @param medicationId
      * @param tripId
      * @return Result of soft-deletion
      */

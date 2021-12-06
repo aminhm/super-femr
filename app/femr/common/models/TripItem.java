@@ -1,6 +1,9 @@
 package femr.common.models;
 
+import akka.stream.impl.fusing.Scan;
+
 import java.util.Date;
+import java.util.Scanner;
 
 public class TripItem {
     private String teamName;
@@ -48,4 +51,5 @@ public class TripItem {
     public void setTripEndDate(Date tripEndDate) {
         this.tripEndDate = tripEndDate;
     }
+
 }

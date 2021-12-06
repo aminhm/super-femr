@@ -19,6 +19,7 @@
 package femr.common.models;
 
 import java.util.Date;
+import java.util.Scanner;
 
 public class MissionTripItem {
 
@@ -28,6 +29,7 @@ public class MissionTripItem {
     private Date tripStartDate;
     private String friendlyTripStartDate;
     private Date tripEndDate;
+    private Scanner tripCSVfile;
     private String friendlyTripEndDate;
     private String teamName; //name of the team running the trip (duplicated in MissionItem)
     private String friendlyTripTitle;
@@ -78,6 +80,14 @@ public class MissionTripItem {
 
     public void setTripEndDate(Date tripEndDate) {
         this.tripEndDate = tripEndDate;
+    }
+
+    public Scanner getTripCSVfile() {
+        return tripCSVfile;
+    }
+
+    public void setTripCSVfile(Scanner tripCSVfile) {
+        this.tripCSVfile = tripCSVfile;
     }
 
     public String getFriendlyTripEndDate() {

@@ -29,6 +29,7 @@ import org.joda.time.DateTime;
 import java.text.DecimalFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Scanner;
 
 /**
  * Responsible for creating item objects (common/models)

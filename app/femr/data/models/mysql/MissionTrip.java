@@ -18,10 +18,7 @@
 */
 package femr.data.models.mysql;
 
-import femr.data.models.core.IMissionCity;
-import femr.data.models.core.IMissionTeam;
-import femr.data.models.core.IMissionTrip;
-import femr.data.models.core.IUser;
+import femr.data.models.core.*;
 
 
 import javax.persistence.*;
